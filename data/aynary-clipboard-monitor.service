@@ -1,0 +1,13 @@
+[Unit]
+Description=Aynary Clipboard Monitor
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/aynary --clipboard-monitor
+Restart=on-failure
+User=%u
+
+[Install]
+WantedBy=default.target
+

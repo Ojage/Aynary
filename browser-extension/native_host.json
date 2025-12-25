@@ -1,0 +1,10 @@
+{
+  "name": "com.aynary.dictionary",
+  "description": "Native messaging host for Aynary dictionary browser extension",
+  "path": "/usr/local/bin/aynary-native-host",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://YOUR_EXTENSION_ID_HERE/"
+  ]
+}
+

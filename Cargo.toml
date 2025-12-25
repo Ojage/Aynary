@@ -1,0 +1,29 @@
+[package]
+name = "aynary"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name"]
+description = "Aynary - Dictionary application for Fedora Workstation"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+gtk4 = { version = "0.8", package = "gtk4" }
+gdk4 = "0.8"
+adw = { version = "0.5", package = "libadwaita" }
+glib = { version = "0.19", features = ["v2_74"] }
+gio = { version = "0.19", features = ["v2_74"] }
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+dbus = "0.9"
+anyhow = "1.0"
+thiserror = "1.0"
+urlencoding = "2.1"
+
+[build-dependencies]
+glib-build-tools = "0.19"
+
+[[bin]]
+name = "aynary-native-host"
+path = "src/native_host.rs"

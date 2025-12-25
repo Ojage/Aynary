@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.settings-daemon.plugins.media-keys" path="/org/gnome/settings-daemon/plugins/media-keys/">
+    <key name="aynary" type="as">
+      <default>['&lt;Primary&gt;&lt;Shift&gt;d']</default>
+      <summary>Keyboard shortcut for Aynary dictionary lookup</summary>
+      <description>Keyboard shortcut to lookup selected text with Aynary dictionary</description>
+    </key>
+  </schema>
+</schemalist>
+

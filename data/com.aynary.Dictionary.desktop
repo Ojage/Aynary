@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Aynary Dictionary
+Comment=Dictionary application for Fedora Workstation
+Exec=aynary
+Icon=aynary
+Terminal=false
+Categories=Utility;Education;Dictionary;
+Keywords=dictionary;define;word;reference;
+
