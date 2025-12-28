@@ -6,12 +6,14 @@ mod clipboard_monitor;
 
 use app::App;
 use adw::prelude::*;
+use gtk4::{CssProvider, StyleContext};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 fn main() {
     // Initialize GTK
     adw::init().expect("Failed to initialize Adwaita");
+    load_css();
 
     let mut app = App::new();
     app.setup();
@@ -61,3 +63,59 @@ fn main() {
     }
 }
 
+fn load_css() {
+    let provider = CssProvider::new();
+    provider.load_from_data(
+        br#"
+        .brand-title {
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-subtitle {
+            font-size: 13px;
+            color: alpha(@theme_fg_color, 0.65);
+        }
+
+        .search-entry {
+            padding: 8px 12px;
+            border-radius: 10px;
+        }
+
+        .definition-card {
+            background: @window_bg_color;
+            border-radius: 14px;
+            padding: 8px;
+            box-shadow: 0 12px 24px alpha(black, 0.08);
+        }
+
+        .definition-text {
+            font-size: 14px;
+        }
+
+        .placeholder-icon {
+            color: alpha(@theme_fg_color, 0.35);
+        }
+
+        .placeholder-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: alpha(@theme_fg_color, 0.85);
+        }
+
+        .placeholder-subtitle {
+            font-size: 13px;
+            color: alpha(@theme_fg_color, 0.6);
+        }
+        "#,
+    );
+
+    if let Some(display) = gtk4::gdk::Display::default() {
+        StyleContext::add_provider_for_display(
+            &display,
+            &provider,
+            gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
+}
