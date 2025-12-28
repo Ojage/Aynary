@@ -3,9 +3,8 @@ use crate::ui::AppWindow;
 use adw::prelude::*;
 use adw::Application;
 use anyhow::Result;
-use glib::MainContext;
-use gtk::glib;
-use std::sync::{Arc, Mutex};
+use gtk4::glib;
+use std::sync::{Arc, Mutex, mpsc};
 use tokio::runtime::Runtime;
 
 pub struct App {
@@ -41,52 +40,61 @@ impl App {
         let window_ref = Arc::clone(&self.window);
         let runtime_handle = self.runtime.handle().clone();
 
-        // Create window
-        let window = Arc::new(AppWindow::new(&application));
-        
-        // Setup search entry handler
-        let search_entry = window.search_entry.clone();
-        let definition_view = window.definition_view.clone();
-        let client_clone = client.clone();
-        let runtime_clone = runtime_handle.clone();
-
-        search_entry.connect_activate(move |entry| {
-            let word = entry.text().to_string();
-            if word.is_empty() {
-                return;
-            }
-
-            definition_view.buffer().set_text("Loading...");
-
-            let client = client_clone.clone();
-            let view = definition_view.clone();
-            runtime_clone.spawn(async move {
-                match client.lookup(&word).await {
-                    Ok(entries) => {
-                        let formatted = client.format_entry(&entries);
-                        MainContext::default().invoke(move || {
-                            view.buffer().set_text(&formatted);
-                        });
-                    }
-                    Err(e) => {
-                        let error_msg = format!("Error: {}", e);
-                        MainContext::default().invoke(move || {
-                            view.buffer().set_text(&error_msg);
-                        });
-                    }
-                }
-            });
-        });
-
-        // Store window reference
-        {
+        // Handle application activation - create window here (after startup signal)
+        self.application.connect_activate(move |app| {
             let mut window_guard = window_ref.lock().unwrap();
-            *window_guard = Some(window.clone());
-        }
+            
+            // Create window if it doesn't exist
+            if window_guard.is_none() {
+                // Create window
+                let window = Arc::new(AppWindow::new(app));
+                
+                // Setup search entry handler
+                let search_entry = window.search_entry.clone();
+                let definition_view = window.definition_view.clone();
+                let client_clone = client.clone();
+                let runtime_clone = runtime_handle.clone();
+                let window_ref_for_search = window_ref.clone();
 
-        // Handle application activation
-        self.application.connect_activate(move |_app| {
-            let window_guard = window_ref.lock().unwrap();
+                search_entry.connect_activate(move |entry| {
+                    let word = entry.text().to_string();
+                    if word.is_empty() {
+                        return;
+                    }
+
+                    definition_view.buffer().set_text("Loading...");
+
+                    let client = client_clone.clone();
+                    let (tx, rx) = std::sync::mpsc::channel::<String>();
+                    let window_ref_clone = window_ref_for_search.clone();
+
+                    runtime_clone.spawn(async move {
+                        let result = match client.lookup(&word).await {
+                            Ok(entries) => client.format_entry(&entries),
+                            Err(e) => format!("Error: {}", e),
+                        };
+                        let _ = tx.send(result);
+                    });
+
+                    // Poll for result on main thread
+                    glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
+                        if let Ok(text) = rx.try_recv() {
+                            let window_guard = window_ref_clone.lock().unwrap();
+                            if let Some(window) = window_guard.as_ref() {
+                                window.definition_view.buffer().set_text(&text);
+                            }
+                            glib::ControlFlow::Break
+                        } else {
+                            glib::ControlFlow::Continue
+                        }
+                    });
+                });
+
+                // Store window reference
+                *window_guard = Some(window.clone());
+            }
+            
+            // Show window
             if let Some(w) = window_guard.as_ref() {
                 w.show();
             }
@@ -103,23 +111,29 @@ impl App {
         window.show();
 
         let client = self.client.clone();
-        let definition_view = window.definition_view.clone();
-        let runtime_handle = self.runtime.handle().clone();
+        let word = word.to_string();
+        let (tx, rx) = std::sync::mpsc::channel::<String>();
 
-        runtime_handle.spawn(async move {
-            match client.lookup(word).await {
-                Ok(entries) => {
-                    let formatted = client.format_entry(&entries);
-                    MainContext::default().invoke(move || {
-                        definition_view.buffer().set_text(&formatted);
-                    });
+        // Use tokio spawn for async work
+        self.runtime.handle().spawn(async move {
+            let result = match client.lookup(&word).await {
+                Ok(entries) => client.format_entry(&entries),
+                Err(e) => format!("Error: {}", e),
+            };
+            let _ = tx.send(result);
+        });
+
+        // Update UI from result channel on main thread
+        let window_ref = Arc::clone(&self.window);
+        glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
+            if let Ok(text) = rx.try_recv() {
+                let window_guard = window_ref.lock().unwrap();
+                if let Some(window) = window_guard.as_ref() {
+                    window.definition_view.buffer().set_text(&text);
                 }
-                Err(e) => {
-                    let error_msg = format!("Error: {}", e);
-                    MainContext::default().invoke(move || {
-                        definition_view.buffer().set_text(&error_msg);
-                    });
-                }
+                glib::ControlFlow::Break
+            } else {
+                glib::ControlFlow::Continue
             }
         });
 

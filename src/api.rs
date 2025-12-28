@@ -10,6 +10,7 @@ pub struct DictionaryEntry {
     pub phonetics: Vec<Phonetic>,
     pub meanings: Vec<Meaning>,
     pub license: Option<License>,
+    #[serde(rename = "sourceUrls")]
     pub source_urls: Vec<String>,
 }
 
@@ -17,12 +18,14 @@ pub struct DictionaryEntry {
 pub struct Phonetic {
     pub text: Option<String>,
     pub audio: Option<String>,
+    #[serde(rename = "sourceUrl")]
     pub source_url: Option<String>,
     pub license: Option<License>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Meaning {
+    #[serde(rename = "partOfSpeech")]
     pub part_of_speech: String,
     pub definitions: Vec<Definition>,
     pub synonyms: Vec<String>,
@@ -67,7 +70,7 @@ impl DictionaryClient {
         let url = format!("{}/{}", DICTIONARY_API_BASE, word_encoded);
 
         let response = self
-            client
+            .client
             .get(&url)
             .send()
             .await

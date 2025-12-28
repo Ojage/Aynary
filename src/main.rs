@@ -6,7 +6,7 @@ mod clipboard_monitor;
 
 use app::App;
 use adw::prelude::*;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 fn main() {
@@ -17,50 +17,41 @@ fn main() {
     app.setup();
     
     // Create a channel for DBus to communicate with the app
-    let (sender, receiver) = glib::MainContext::channel(glib::Priority::default());
+    let (sender, receiver) = mpsc::channel::<dbus_service::DbusCommand>();
     
     // Store app in Arc for DBus service
     let app_arc = Arc::new(Mutex::new(app));
     
     // Start DBus service in a separate thread
-    let sender_clone = sender.clone();
+    let sender_for_dbus = sender.clone();
     thread::spawn(move || {
-        let service = dbus_service::DictionaryService::new(sender_clone);
+        let service = dbus_service::DictionaryService::new(sender_for_dbus);
         if let Err(e) = service.start() {
             eprintln!("DBus service error: {}", e);
         }
     });
 
-    // Note: Clipboard monitoring is disabled for now as it requires more complex
-    // implementation. Users can use keyboard shortcuts or browser extension instead.
-    // To enable, uncomment below and implement proper clipboard change detection:
-    //
-    // thread::spawn(move || {
-    //     let rt = tokio::runtime::Runtime::new().unwrap();
-    //     rt.block_on(async {
-    //         let mut monitor = clipboard_monitor::ClipboardMonitor::new();
-    //         if let Err(e) = monitor.start().await {
-    //             eprintln!("Clipboard monitor error: {}", e);
-    //         }
-    //     });
-    // });
-
-    // Handle DBus commands on the main thread
+    // Handle DBus commands on the main thread using glib idle callbacks
     let app_main = Arc::clone(&app_arc);
-    receiver.attach(None, move |cmd| {
-        let mut app_guard = app_main.lock().unwrap();
-        match cmd {
-            dbus_service::DbusCommand::LookupWord(word) => {
-                let _ = app_guard.lookup_word(&word);
-            }
-            dbus_service::DbusCommand::ShowWindow => {
-                app_guard.show_window();
-            }
-            dbus_service::DbusCommand::LookupAndShow(word) => {
-                let _ = app_guard.lookup_and_show(&word);
+    
+    // Set up a periodic check for messages (using glib timeout)
+    glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
+        // Try to receive messages
+        while let Ok(cmd) = receiver.try_recv() {
+            let mut app_guard = app_main.lock().unwrap();
+            match cmd {
+                dbus_service::DbusCommand::LookupWord(word) => {
+                    let _ = app_guard.lookup_word(&word);
+                }
+                dbus_service::DbusCommand::ShowWindow => {
+                    app_guard.show_window();
+                }
+                dbus_service::DbusCommand::LookupAndShow(word) => {
+                    let _ = app_guard.lookup_and_show(&word);
+                }
             }
         }
-        glib::Continue(true)
+        glib::ControlFlow::Continue
     });
 
     // Run the GTK application

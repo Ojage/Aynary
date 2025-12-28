@@ -2,7 +2,6 @@
 // This binary communicates with the browser extension via stdin/stdout
 
 use dbus::blocking::Connection;
-use dbus::Message;
 use std::io::{self, BufRead, Write};
 use std::time::Duration;
 
@@ -32,15 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             Duration::from_millis(5000),
                         );
 
-                        let msg = Message::method_call(
-                            DBUS_SERVICE_NAME,
-                            DBUS_OBJECT_PATH,
-                            DBUS_INTERFACE,
-                            "LookupAndShow",
-                        )?
-                        .append1(word);
-
-                        let _reply = proxy.method_call(msg)?;
+                        let _reply: () = proxy.method_call(DBUS_INTERFACE, "LookupAndShow", (word,))?;
 
                         // Send response to extension
                         let response = serde_json::json!({

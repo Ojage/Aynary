@@ -17,11 +17,14 @@ A native dictionary application for Fedora Workstation 43 with comprehensive con
 - GTK4 development libraries
 - libadwaita
 - pkg-config
+- DBus development libraries
 
 On Fedora:
 ```bash
-sudo dnf install rust gtk4-devel libadwaita-devel pkg-config
+sudo dnf install rust gtk4-devel libadwaita-devel pkgconf-pkg-config dbus-devel
 ```
+
+Note: The build uses `rustls` for TLS (via reqwest), so OpenSSL development libraries are not required.
 
 ### Build
 

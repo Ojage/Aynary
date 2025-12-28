@@ -1,7 +1,7 @@
 use adw::prelude::*;
 use adw::ApplicationWindow;
-use gtk::prelude::*;
-use gtk::{Entry, ScrolledWindow, TextView};
+use gtk4::prelude::*;
+use gtk4::{Entry, ScrolledWindow, TextView, WrapMode, Orientation, Box as GtkBox, AboutDialog};
 
 pub struct AppWindow {
     pub window: adw::ApplicationWindow,
@@ -27,22 +27,33 @@ impl AppWindow {
             .build();
 
         header.set_title_widget(Some(&search_entry));
-        header.set_show_end_title_buttons(false);
-        header.set_show_start_title_buttons(false);
+        
+        // Enable window controls (close, minimize, maximize buttons) - these appear automatically
+        header.set_show_end_title_buttons(true);
+        header.set_show_start_title_buttons(true);
+        
+        // Add About button with menu icon
+        let about_button = gtk4::Button::from_icon_name("open-menu-symbolic");
+        about_button.set_tooltip_text(Some("About Aynary"));
+        let app_clone = app.clone();
+        about_button.connect_clicked(move |_| {
+            // Show about dialog directly
+            show_about_dialog_ui(&app_clone);
+        });
+        header.pack_end(&about_button);
 
         // Create definition display area
         let definition_view = TextView::builder()
             .editable(false)
             .cursor_visible(false)
-            .wrap_mode(gtk::WrapMode::Word)
+            .wrap_mode(WrapMode::Word)
             .top_margin(12)
             .bottom_margin(12)
             .left_margin(12)
             .right_margin(12)
             .build();
 
-        // Enable markup in the text view
-        definition_view.buffer().set_editable(false);
+        // Text view is already set to non-editable via builder
 
         let scrolled = ScrolledWindow::builder()
             .child(&definition_view)
@@ -51,8 +62,8 @@ impl AppWindow {
             .build();
 
         // Create main content box
-        let content = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
+        let content = GtkBox::builder()
+            .orientation(Orientation::Vertical)
             .build();
 
         content.append(&header);
@@ -90,6 +101,22 @@ impl AppWindow {
         if loading {
             self.definition_view.buffer().set_text("Loading...");
         }
+    }
+}
+
+fn show_about_dialog_ui(app: &adw::Application) {
+    if let Some(win) = app.active_window() {
+        let about = AboutDialog::builder()
+            .program_name("Aynary")
+            .version("0.1.0")
+            .copyright("© 2026 Salathiel Ojage")
+            .license_type(gtk4::License::MitX11)
+            .authors(vec!["Salathiel Ojage".to_string()])
+            .comments("A modern dictionary application for Fedora Workstation\n\nDeveloped by Salathiel Ojage")
+            .build();
+        
+        about.set_transient_for(Some(&win));
+        about.present();
     }
 }
 

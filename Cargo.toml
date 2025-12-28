@@ -7,12 +7,12 @@ description = "Aynary - Dictionary application for Fedora Workstation"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-gtk4 = { version = "0.8", package = "gtk4" }
-gdk4 = "0.8"
+gtk4 = { version = "0.7", package = "gtk4" }
+gdk4 = "0.7"
 adw = { version = "0.5", package = "libadwaita" }
 glib = { version = "0.19", features = ["v2_74"] }
 gio = { version = "0.19", features = ["v2_74"] }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
@@ -21,8 +21,8 @@ anyhow = "1.0"
 thiserror = "1.0"
 urlencoding = "2.1"
 
-[build-dependencies]
-glib-build-tools = "0.19"
+# [build-dependencies]
+# glib-build-tools = "0.19"  # Uncomment if using GTK resource files
 
 [[bin]]
 name = "aynary-native-host"
