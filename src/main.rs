@@ -11,6 +11,13 @@ use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 fn main() {
+    // #region agent log
+    use std::fs::OpenOptions;
+    use std::io::Write;
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("/home/salathiel/House Projects/.cursor/debug.log") {
+        let _ = writeln!(file, "{{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\",\"location\":\"main.rs:13\",\"message\":\"Application starting\",\"data\":{{\"exe_path\":\"{}\"}},\"timestamp\":{}}}", std::env::current_exe().unwrap_or_default().display(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
+    }
+    // #endregion
     // Initialize GTK
     adw::init().expect("Failed to initialize Adwaita");
     load_css();
@@ -65,8 +72,7 @@ fn main() {
 
 fn load_css() {
     let provider = CssProvider::new();
-    provider.load_from_data(
-        br#"
+    let css_data = r#"
         .brand-title {
             font-size: 34px;
             font-weight: 700;
@@ -108,8 +114,8 @@ fn load_css() {
             font-size: 13px;
             color: alpha(@theme_fg_color, 0.6);
         }
-        "#,
-    );
+        "#;
+    let _ = provider.load_from_data(css_data);
 
     if let Some(display) = gtk4::gdk::Display::default() {
         StyleContext::add_provider_for_display(

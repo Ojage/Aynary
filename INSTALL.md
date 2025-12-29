@@ -26,6 +26,8 @@ This will compile the application and create binaries in `target/release/`:
 - `aynary` - Main dictionary application
 - `aynary-native-host` - Native messaging host for browser extension
 
+Note: The dictionary is fully offline. The bundled data in `data/dictionary.json` is embedded at build time; edit that file before building if you want to ship a larger dataset.
+
 ## Step 3: Install the Application
 
 To install system-wide:
@@ -99,5 +101,4 @@ If the application doesn't start:
 If DBus communication fails:
 - Make sure the DBus service file is installed: `ls ~/.local/share/dbus-1/services/com.aynary.Dictionary.service` (or `/usr/share/dbus-1/services/`)
 - Check if the service is running: `dbus-send --session --print-reply --dest=com.aynary.Dictionary /com/aynary/Dictionary org.freedesktop.DBus.Introspectable.Introspect`
-
 

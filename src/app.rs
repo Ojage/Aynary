@@ -3,8 +3,7 @@ use crate::ui::AppWindow;
 use adw::prelude::*;
 use adw::Application;
 use anyhow::Result;
-use gtk4::glib;
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 
 pub struct App {
@@ -38,10 +37,9 @@ impl App {
         let application = self.application.clone();
         let client = self.client.clone();
         let window_ref = Arc::clone(&self.window);
-        let runtime_handle = self.runtime.handle().clone();
 
         // Handle application activation - create window here (after startup signal)
-        self.application.connect_activate(move |app| {
+        application.connect_activate(move |app| {
             let mut window_guard = window_ref.lock().unwrap();
             
             // Create window if it doesn't exist
@@ -51,9 +49,7 @@ impl App {
                 
                 // Setup search entry handler
                 let search_entry = window.search_entry.clone();
-                let definition_view = window.definition_view.clone();
                 let client_clone = client.clone();
-                let runtime_clone = runtime_handle.clone();
                 let window_ref_for_search = window_ref.clone();
 
                 search_entry.connect_activate(move |entry| {
@@ -62,32 +58,48 @@ impl App {
                         return;
                     }
 
-                    definition_view.buffer().set_text("Loading...");
+                    // Set loading state (switches to definition view)
+                    {
+                        let window_guard = window_ref_for_search.lock().unwrap();
+                        if let Some(window) = window_guard.as_ref() {
+                            window.set_loading(true);
+                        }
+                    }
 
                     let client = client_clone.clone();
-                    let (tx, rx) = std::sync::mpsc::channel::<String>();
                     let window_ref_clone = window_ref_for_search.clone();
 
-                    runtime_clone.spawn(async move {
-                        let result = match client.lookup(&word).await {
-                            Ok(entries) => client.format_entry(&entries),
-                            Err(e) => format!("Error: {}", e),
-                        };
-                        let _ = tx.send(result);
-                    });
-
-                    // Poll for result on main thread
-                    glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
-                        if let Ok(text) = rx.try_recv() {
-                            let window_guard = window_ref_clone.lock().unwrap();
-                            if let Some(window) = window_guard.as_ref() {
-                                window.definition_view.buffer().set_text(&text);
+                    // Perform synchronous lookup and update UI
+                    // #region agent log
+                    use std::fs::OpenOptions;
+                    use std::io::Write;
+                    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("/home/salathiel/House Projects/.cursor/debug.log") {
+                        let _ = writeln!(file, "{{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"app.rs:73\",\"message\":\"About to call client.lookup\",\"data\":{{\"word\":\"{}\"}},\"timestamp\":{}}}", word, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
+                    }
+                    // #endregion
+                    let result = match client.lookup(&word) {
+                        Ok(entries) => {
+                            // #region agent log
+                            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("/home/salathiel/House Projects/.cursor/debug.log") {
+                                let _ = writeln!(file, "{{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"app.rs:76\",\"message\":\"Lookup succeeded\",\"data\":{{\"word\":\"{}\",\"entries_count\":{}}},\"timestamp\":{}}}", word, entries.len(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
                             }
-                            glib::ControlFlow::Break
-                        } else {
-                            glib::ControlFlow::Continue
+                            // #endregion
+                            client.format_entry(&entries)
                         }
-                    });
+                        Err(e) => {
+                            // #region agent log
+                            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("/home/salathiel/House Projects/.cursor/debug.log") {
+                                let _ = writeln!(file, "{{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"app.rs:82\",\"message\":\"Lookup failed\",\"data\":{{\"word\":\"{}\",\"error\":\"{}\"}},\"timestamp\":{}}}", word, format!("{:?}", e).replace("\"", "\\\"").replace("\n", "\\n"), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
+                            }
+                            // #endregion
+                            format!("Error: {}", e)
+                        }
+                    };
+
+                    let window_guard = window_ref_clone.lock().unwrap();
+                    if let Some(window) = window_guard.as_ref() {
+                        window.set_definition(&result);
+                    }
                 });
 
                 // Store window reference
@@ -110,34 +122,15 @@ impl App {
         window.set_loading(true);
         window.show();
 
-        let client = self.client.clone();
-        let word = word.to_string();
-        let (tx, rx) = std::sync::mpsc::channel::<String>();
+        // Perform synchronous lookup
+        let result = match self.client.lookup(word) {
+            Ok(entries) => self.client.format_entry(&entries),
+            Err(e) => format!("Error: {}", e),
+        };
 
-        // Use tokio spawn for async work
-        self.runtime.handle().spawn(async move {
-            let result = match client.lookup(&word).await {
-                Ok(entries) => client.format_entry(&entries),
-                Err(e) => format!("Error: {}", e),
-            };
-            let _ = tx.send(result);
-        });
+        window.definition_view.buffer().set_text(&result);
 
-        // Update UI from result channel on main thread
-        let window_ref = Arc::clone(&self.window);
-        glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
-            if let Ok(text) = rx.try_recv() {
-                let window_guard = window_ref.lock().unwrap();
-                if let Some(window) = window_guard.as_ref() {
-                    window.definition_view.buffer().set_text(&text);
-                }
-                glib::ControlFlow::Break
-            } else {
-                glib::ControlFlow::Continue
-            }
-        });
-
-        Ok(String::from("Lookup initiated"))
+        Ok(String::from("Lookup completed"))
     }
 
     pub fn show_window(&self) {

@@ -1,5 +1,5 @@
 use adw::prelude::*;
-use adw::{ApplicationWindow, Clamp, ToolbarView, WindowTitle};
+use adw::{ApplicationWindow, Clamp, WindowTitle};
 use gtk4::prelude::*;
 use gtk4::{
     AboutDialog,
@@ -37,7 +37,7 @@ impl AppWindow {
         // Create header bar with search
         let header = adw::HeaderBar::new();
         header.add_css_class("flat");
-        let title = WindowTitle::new("Aynary", Some("Dictionary"));
+        let title = WindowTitle::new("Aynary", "Dictionary");
         header.set_title_widget(Some(&title));
 
         let search_entry = Entry::builder()
@@ -158,11 +158,14 @@ impl AppWindow {
             .build();
         clamp.set_child(Some(&content));
 
-        let view = ToolbarView::new();
-        view.add_top_bar(&header);
-        view.set_content(Some(&clamp));
+        // Create main content container
+        let main_box = GtkBox::builder()
+            .orientation(Orientation::Vertical)
+            .build();
+        main_box.append(&header);
+        main_box.append(&clamp);
 
-        window.set_content(Some(&view));
+        window.set_content(Some(&main_box));
 
         Self {
             window,

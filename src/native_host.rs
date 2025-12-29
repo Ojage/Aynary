@@ -2,6 +2,7 @@
 // This binary communicates with the browser extension via stdin/stdout
 
 use dbus::blocking::Connection;
+use serde_json;
 use std::io::{self, BufRead, Write};
 use std::time::Duration;
 

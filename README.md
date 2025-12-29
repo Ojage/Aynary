@@ -4,6 +4,7 @@ A native dictionary application for Fedora Workstation 43 with comprehensive con
 
 ## Features
 
+- **Offline First**: Uses bundled dictionary data, no network calls at runtime
 - **Standalone Dictionary App**: Open Aynary to search for word definitions
 - **Browser Integration**: Right-click highlighted text in browsers to define with Aynary
 - **Global Clipboard Monitoring**: Automatically lookup words when you highlight text
@@ -66,6 +67,10 @@ Simply run `aynary` from the command line or launch it from the application menu
 
 The clipboard monitor runs automatically when the application starts. It watches for text selections and automatically looks up single words.
 
+## Offline Dictionary Data
+
+A small offline dataset ships with the app in `data/dictionary.json` and is embedded in the binary at build time. You can expand or replace this file with a larger dataset before building to customize the available definitions.
+
 ## Development
 
 ### Project Structure
@@ -89,4 +94,3 @@ aynary/
 ## License
 
 MIT OR Apache-2.0
-
