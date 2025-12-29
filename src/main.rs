@@ -11,13 +11,6 @@ use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 fn main() {
-    // #region agent log
-    use std::fs::OpenOptions;
-    use std::io::Write;
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("/home/salathiel/House Projects/.cursor/debug.log") {
-        let _ = writeln!(file, "{{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\",\"location\":\"main.rs:13\",\"message\":\"Application starting\",\"data\":{{\"exe_path\":\"{}\"}},\"timestamp\":{}}}", std::env::current_exe().unwrap_or_default().display(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
-    }
-    // #endregion
     // Initialize GTK
     adw::init().expect("Failed to initialize Adwaita");
     load_css();

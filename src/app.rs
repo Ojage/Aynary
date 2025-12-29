@@ -70,30 +70,9 @@ impl App {
                     let window_ref_clone = window_ref_for_search.clone();
 
                     // Perform synchronous lookup and update UI
-                    // #region agent log
-                    use std::fs::OpenOptions;
-                    use std::io::Write;
-                    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("/home/salathiel/House Projects/.cursor/debug.log") {
-                        let _ = writeln!(file, "{{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"app.rs:73\",\"message\":\"About to call client.lookup\",\"data\":{{\"word\":\"{}\"}},\"timestamp\":{}}}", word, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
-                    }
-                    // #endregion
                     let result = match client.lookup(&word) {
-                        Ok(entries) => {
-                            // #region agent log
-                            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("/home/salathiel/House Projects/.cursor/debug.log") {
-                                let _ = writeln!(file, "{{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"app.rs:76\",\"message\":\"Lookup succeeded\",\"data\":{{\"word\":\"{}\",\"entries_count\":{}}},\"timestamp\":{}}}", word, entries.len(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
-                            }
-                            // #endregion
-                            client.format_entry(&entries)
-                        }
-                        Err(e) => {
-                            // #region agent log
-                            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("/home/salathiel/House Projects/.cursor/debug.log") {
-                                let _ = writeln!(file, "{{\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"D\",\"location\":\"app.rs:82\",\"message\":\"Lookup failed\",\"data\":{{\"word\":\"{}\",\"error\":\"{}\"}},\"timestamp\":{}}}", word, format!("{:?}", e).replace("\"", "\\\"").replace("\n", "\\n"), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
-                            }
-                            // #endregion
-                            format!("Error: {}", e)
-                        }
+                        Ok(entries) => client.format_entry(&entries),
+                        Err(e) => format!("Error: {}", e),
                     };
 
                     let window_guard = window_ref_clone.lock().unwrap();
